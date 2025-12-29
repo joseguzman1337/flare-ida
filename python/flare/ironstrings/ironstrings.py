@@ -92,6 +92,12 @@ StackString = namedtuple("StackString",
 def main():
     eh = flare_emu.EmuHelper()
 
+    # hacky way to increase stack size (default is 0x2000 and it's really only half, because the stack pointer begins
+    # in the middle of the allocated stack size); for functions with larger stacks this caused issues, see e.g.,
+    # https://github.com/mandiant/flare-ida/issues/127
+    eh.stackSize = 0x8000
+    eh.resetEmulatorHeapAndStack()
+    
     # dictionary that stores data used across emulation runs, function emulation specific data is set below
     userData = {
         # found stackstrings in stack memory
@@ -161,14 +167,14 @@ def main():
             # print stackstrings found in this function
             f_ss = list(filter(lambda s: s.fva == fva, userData["stackstrings"]))
             cnt_found_ss += len(f_ss)
-            for ss in sorted(f_ss, key=lambda s: s.written_at):
+            for ss in sorted(f_ss, key=lambda s: s.written_at or 0):
                 print_string(ss.fva, ss.written_at, ss.offset, ss.s)
                 # IMPROVEMENT adjust stack frame member size in IDA view
 
             # print globalstrings found in this function
             f_gs = list(filter(lambda g: g.fva == fva, userData["globalstrings"]))
             cnt_found_ss += len(f_gs)
-            for gs in sorted(f_gs, key=lambda g: g.written_at):
+            for gs in sorted(f_gs, key=lambda g: g.written_at or 0):
                 print_string(gs.fva, gs.written_at, gs.offset, gs.s)
 
             if COMMENT_STACKSTRINGS:
